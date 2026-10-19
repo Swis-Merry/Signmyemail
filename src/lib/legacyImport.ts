@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { saveAsset } from "./assets";
 import { getDb, schema } from "./db";
-import { createGenerator, DEFAULT_EDITABLE } from "./generators";
 import { defaultSignatureData, newId, normalizeSignatureData } from "./signature/defaults";
 import { createSignature } from "./signatures";
 import type { FontSize, SignatureData } from "./signature/types";
@@ -118,11 +117,5 @@ export async function importLegacy(full: LegacyRecord[], list: LegacyListRow[]) 
     await createSignature({ data, ownerId: admin?.id ?? null, legacyId: row.id });
     created++;
   }
-  let generatorCreated = false;
-  const gens = await db.select().from(schema.generators).where(eq(schema.generators.slug, "dre-team")).limit(1);
-  if (!gens.length && admin) {
-    await createGenerator({ name: "DRE team signature", slug: "dre-team", data: base, editableFields: [...DEFAULT_EDITABLE], isActive: true }, admin.id);
-    generatorCreated = true;
-  }
-  return { created, skipped, fullRecords: full.length, generatorCreated };
+  return { created, skipped, fullRecords: full.length };
 }

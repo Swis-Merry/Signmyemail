@@ -16,6 +16,7 @@ export default async function AppShell({ children, wide = false }: { children: R
           <nav className="flex items-center gap-5 text-sm">
             <Link href="/dashboard" className="hover:underline">Dashboard</Link>
             <Link href="/signatures/new" className="hover:underline">Create signature</Link>
+            <Link href="/bulk" className="hover:underline">Bulk upload</Link>
             <Link href="/settings" className="hover:underline">Settings</Link>
             <span className="hidden text-white/70 sm:inline">{user.name}</span>
             <form action={logoutAction}>

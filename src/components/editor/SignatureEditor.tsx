@@ -73,16 +73,13 @@ export default function SignatureEditor({ initial, id, others = [] }: { initial:
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  async function save(then: "install" | "stay" | "generator") {
+  async function save(then: "install" | "stay") {
     setSaving(then);
     setError("");
-    const res = then === "generator"
-      ? await fetch("/api/generators", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `${data.details.company || "Company"} generator`, data }) })
-      : await fetch(id ? `/api/signatures/${id}` : "/api/signatures", { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data }) });
+    const res = await fetch(id ? `/api/signatures/${id}` : "/api/signatures", { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data }) });
     const json = await res.json().catch(() => ({}));
     setSaving(null);
     if (!res.ok) return setError(json.error || "Save failed");
-    if (then === "generator") return router.push(`/generators/${json.id}`);
     setDirty(false);
     if (then === "install") router.push(`/signatures/${json.id}`);
     else if (!id) router.replace(`/signatures/${json.id}/edit`);
@@ -104,7 +101,6 @@ export default function SignatureEditor({ initial, id, others = [] }: { initial:
       </div>
       <div className="flex items-center gap-2">
         {error && <span className="text-sm text-red-600">{error}</span>}
-        <button className="btn-secondary" disabled={!!saving} onClick={() => save("generator")}>{saving === "generator" ? "Creating..." : "Save as generator"}</button>
         <button className="btn-secondary" disabled={!!saving} onClick={() => save("stay")}>{saving === "stay" ? "Saving..." : "Save"}</button>
         <button className="btn-primary" disabled={!!saving} onClick={() => save("install")}>{saving === "install" ? "Saving..." : "Save & install"}</button>
       </div>

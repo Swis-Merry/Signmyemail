@@ -15,7 +15,6 @@ const read = (f: string) => JSON.parse(readFileSync(path.join(dir, f), "utf8"));
 
 importLegacy(read("signatures.json"), read("dashboard_list.json"))
   .then((r) => {
-    if (r.generatorCreated) console.log("created generator /g/dre-team");
     console.log(`imported ${r.created}, skipped ${r.skipped} already imported, full data for ${r.fullRecords}`);
     process.exit(0);
   })

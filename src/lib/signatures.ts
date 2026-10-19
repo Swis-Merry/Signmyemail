@@ -14,7 +14,16 @@ export async function listSignatures(q?: string) {
   const db = await getDb();
   const where = q ? or(ilike(signatures.name, `%${q}%`), ilike(signatures.email, `%${q}%`)) : undefined;
   return db
-    .select({ id: signatures.id, name: signatures.name, email: signatures.email, generatorId: signatures.generatorId, gmailSyncedAt: signatures.gmailSyncedAt, updatedAt: signatures.updatedAt, publicToken: signatures.publicToken })
+    .select({
+      id: signatures.id,
+      name: signatures.name,
+      email: signatures.email,
+      gmailSyncedAt: signatures.gmailSyncedAt,
+      updatedAt: signatures.updatedAt,
+      publicToken: signatures.publicToken,
+      hasPhoto: sql<boolean>`coalesce(${signatures.data}->'details'->>'avatarUrl', '') <> ''`,
+      hasTitle: sql<boolean>`coalesce(${signatures.data}->'details'->>'jobTitle', '') <> ''`,
+    })
     .from(signatures)
     .where(where)
     .orderBy(signatures.name);
