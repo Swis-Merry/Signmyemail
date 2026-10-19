@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { APP_NAME } from "@/lib/config";
-import { listGenerators } from "@/lib/generators";
 import { workspaceDomain } from "@/lib/google";
 import { getSignatureByEmail } from "@/lib/signatures";
 
@@ -20,7 +19,6 @@ export default async function InstallPage({ searchParams }: { searchParams: { em
       error = `We couldn't find a signature for ${email}.`;
     }
   }
-  const generator = error ? (await listGenerators()).find((g) => g.isActive) : undefined;
 
   return (
     <main className="mx-auto max-w-xl px-4 py-16">
@@ -34,12 +32,7 @@ export default async function InstallPage({ searchParams }: { searchParams: { em
         <input id="email" name="email" type="email" required defaultValue={email} placeholder={`name@${domain || "company.com"}`} className="input" autoFocus />
         {error && (
           <p className="text-sm text-red-600">
-            {error}{" "}
-            {generator && (
-              <>
-                You can <a href={`/g/${generator.slug}`} className="font-medium underline">create your signature here</a>.
-              </>
-            )}
+            {error} Please ask the Marketing team to set it up for you.
           </p>
         )}
         <button type="submit" className="btn-primary">Show my signature</button>

@@ -9,7 +9,8 @@ interface Row {
   name: string;
   email: string;
   synced: boolean;
-  fromGenerator: boolean;
+  hasPhoto: boolean;
+  hasTitle: boolean;
 }
 
 export default function SignatureTable({ rows }: { rows: Row[] }) {
@@ -49,7 +50,8 @@ export default function SignatureTable({ rows }: { rows: Row[] }) {
               <td className="py-2 pr-4 text-stone-600">{r.email}</td>
               <td className="py-2 pr-4">
                 {r.synced && <span className="mr-1 rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">Gmail</span>}
-                {r.fromGenerator && <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600">Generator</span>}
+                {!r.hasPhoto && <span className="mr-1 rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">No photo</span>}
+                {!r.hasTitle && <span className="rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">No title</span>}
               </td>
               <td className="space-x-3 whitespace-nowrap py-2 text-right">
                 <Link href={`/signatures/${r.id}/edit`} className="text-brand hover:underline">Edit</Link>
