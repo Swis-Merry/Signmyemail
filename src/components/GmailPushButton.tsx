@@ -3,17 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function GmailPushButton({ id, email, configured, selfServe, syncedAt }: { id: string; email: string; configured: boolean; selfServe?: boolean; syncedAt: string | null }) {
+export default function GmailPushButton({ id, email, configured, syncedAt }: { id: string; email: string; configured: boolean; syncedAt: string | null }) {
   const router = useRouter();
   const [state, setState] = useState<{ busy?: boolean; msg?: string; err?: boolean }>({});
   if (!configured) {
-    if (selfServe) {
-      return (
-        <span className="text-xs text-stone-500">
-          Employee installs it in Gmail from the shareable link{syncedAt ? ` (last installed ${new Date(syncedAt).toLocaleString()})` : ""}.
-        </span>
-      );
-    }
     return <span className="text-xs text-stone-400" title="Add Google Workspace credentials in Settings">Gmail push not configured</span>;
   }
   async function push() {

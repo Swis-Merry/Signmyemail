@@ -1,25 +1,49 @@
-import { GmailConnectButton, GmailResult } from "@/components/GmailConnect";
+import { redirect } from "next/navigation";
 import { APP_NAME } from "@/lib/config";
-import { oauthConfigured } from "@/lib/googleOAuth";
+import { listGenerators } from "@/lib/generators";
+import { workspaceDomain } from "@/lib/google";
+import { getSignatureByEmail } from "@/lib/signatures";
 
 export const dynamic = "force-dynamic";
 
-export default function InstallPage({ searchParams }: { searchParams: { gmail?: string; msg?: string } }) {
+/** Staff self-serve: type your work email, get sent to your own signature install page. */
+export default async function InstallPage({ searchParams }: { searchParams: { email?: string } }) {
+  const email = (searchParams.email || "").trim().toLowerCase();
+  const domain = workspaceDomain();
+  let error = "";
+  if (email) {
+    if (domain && !email.endsWith("@" + domain)) {
+      error = `Please use your @${domain} email address.`;
+    } else {
+      const sig = await getSignatureByEmail(email);
+      if (sig) redirect(`/s/${sig.publicToken}`);
+      error = `We couldn't find a signature for ${email}.`;
+    }
+  }
+  const generator = error ? (await listGenerators()).find((g) => g.isActive) : undefined;
+
   return (
     <main className="mx-auto max-w-xl px-4 py-16">
       <div className="text-sm font-semibold uppercase tracking-wide text-brand">{APP_NAME}</div>
-      <h1 className="mb-2 text-2xl font-semibold">Install your email signature in Gmail</h1>
+      <h1 className="mb-2 text-2xl font-semibold">Get your email signature</h1>
       <p className="mb-6 text-sm text-stone-600">
-        Sign in with your work Google account and click <b>Allow</b>. We&apos;ll find the signature made for your email address and
-        put it in your Gmail. It only takes a few seconds.
+        Enter your work email address. You&apos;ll get your signature with a Copy button and short steps for Outlook.
       </p>
-      <GmailResult status={searchParams.gmail} msg={searchParams.msg} />
-      {oauthConfigured() ? (
-        <GmailConnectButton />
-      ) : (
-        <p className="text-sm text-stone-500">Automatic Gmail install is not set up yet. Ask Marketing for your signature link.</p>
-      )}
-      <p className="mt-6 text-xs text-stone-400">We only ask Google for permission to change your Gmail signature. We can&apos;t read your email.</p>
+      <form method="get" className="card space-y-3 p-6">
+        <label htmlFor="email" className="label">Work email</label>
+        <input id="email" name="email" type="email" required defaultValue={email} placeholder={`name@${domain || "company.com"}`} className="input" autoFocus />
+        {error && (
+          <p className="text-sm text-red-600">
+            {error}{" "}
+            {generator && (
+              <>
+                You can <a href={`/g/${generator.slug}`} className="font-medium underline">create your signature here</a>.
+              </>
+            )}
+          </p>
+        )}
+        <button type="submit" className="btn-primary">Show my signature</button>
+      </form>
     </main>
   );
 }

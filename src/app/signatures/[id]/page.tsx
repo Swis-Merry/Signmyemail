@@ -4,7 +4,6 @@ import AppShell from "@/components/AppShell";
 import GmailPushButton from "@/components/GmailPushButton";
 import InstallView from "@/components/InstallView";
 import { gmailConfigured } from "@/lib/google";
-import { oauthConfigured } from "@/lib/googleOAuth";
 import { renderSignature } from "@/lib/signature/render";
 import { getSignature } from "@/lib/signatures";
 import { getBaseUrl } from "@/lib/url";
@@ -31,7 +30,7 @@ export default async function SignaturePage({ params }: { params: { id: string }
         html={html}
         fileName={`${sig.name.replace(/[^\w-]+/g, "_")}.html`}
         downloadUrl={`/api/public/signatures/${sig.publicToken}/html`}
-        extra={<GmailPushButton id={sig.id} email={sig.email} configured={gmailConfigured()} selfServe={oauthConfigured()} syncedAt={sig.gmailSyncedAt?.toISOString() ?? null} />}
+        extra={<GmailPushButton id={sig.id} email={sig.email} configured={gmailConfigured()} syncedAt={sig.gmailSyncedAt?.toISOString() ?? null} />}
       />
     </AppShell>
   );
