@@ -1,4 +1,4 @@
-import { desc, eq, ilike, or } from "drizzle-orm";
+import { desc, eq, ilike, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { getDb, schema } from "@/lib/db";
 import { normalizeSignatureData } from "@/lib/signature/defaults";
@@ -29,6 +29,17 @@ export async function getSignature(id: string) {
 export async function getSignatureByToken(token: string) {
   const db = await getDb();
   const [row] = await db.select().from(signatures).where(eq(signatures.publicToken, token)).limit(1);
+  return row ? { ...row, data: normalizeSignatureData(row.data) } : null;
+}
+
+export async function getSignatureByEmail(email: string) {
+  const db = await getDb();
+  const [row] = await db
+    .select()
+    .from(signatures)
+    .where(sql`lower(trim(${signatures.email})) = ${email.trim().toLowerCase()}`)
+    .orderBy(desc(signatures.updatedAt))
+    .limit(1);
   return row ? { ...row, data: normalizeSignatureData(row.data) } : null;
 }
 
