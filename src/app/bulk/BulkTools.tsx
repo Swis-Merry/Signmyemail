@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface Sig {
   id: string;
@@ -68,6 +68,7 @@ function toDetailRows(text: string) {
 export default function BulkTools({ signatures, defaultSourceId }: { signatures: Sig[]; defaultSourceId: string }) {
   const router = useRouter();
   const [sourceId, setSourceId] = useState(defaultSourceId);
+  const sourceRef = useRef<HTMLSelectElement>(null);
   const [themeMsg, setThemeMsg] = useState("");
   const [busy, setBusy] = useState("");
   const [photoLog, setPhotoLog] = useState<{ file: string; ok: boolean; msg: string }[]>([]);
@@ -75,11 +76,13 @@ export default function BulkTools({ signatures, defaultSourceId }: { signatures:
   const [notFound, setNotFound] = useState<string[]>([]);
 
   async function applyTheme() {
-    const src = signatures.find((s) => s.id === sourceId);
+    // Read the visible selection: the browser can restore it on Back without updating React state.
+    const id = sourceRef.current?.value || sourceId;
+    const src = signatures.find((s) => s.id === id);
     if (!src || !confirm(`Copy the design, banner, company details and social links from ${src.name} to all other signatures? Names, titles, mobiles and photos are kept.`)) return;
     setBusy("theme");
     setThemeMsg("");
-    const res = await fetch("/api/admin/apply-theme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourceId }) });
+    const res = await fetch("/api/admin/apply-theme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sourceId: id }) });
     const json = await res.json().catch(() => ({}));
     setBusy("");
     setThemeMsg(res.ok ? `Theme applied to ${json.updated} signatures.` : json.error || "Failed");
@@ -156,7 +159,7 @@ export default function BulkTools({ signatures, defaultSourceId }: { signatures:
           Copies the layout, colors, fonts, banner, address, phone lines, website and LinkedIn/Instagram from one signature to all others. Each person keeps their own name, email, title, mobile, WhatsApp and photo.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <select className="input w-72" value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
+          <select ref={sourceRef} autoComplete="off" className="input w-72" value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
             {signatures.map((s) => (
               <option key={s.id} value={s.id}>{s.name} ({s.email})</option>
             ))}
