@@ -3,6 +3,23 @@
 import { useState } from "react";
 
 const CLIENTS: Record<string, { label: string; steps: string[] }> = {
+  outlook: {
+    label: "Outlook",
+    steps: [
+      "Click \"Copy signature\" above.",
+      "New Outlook / Outlook on the web: Settings (gear icon) > Account > Signatures. Classic Outlook for Windows: File > Options > Mail > Signatures.",
+      "Click \"+ New signature\", give it a name (e.g. DRE) and paste into the editor (Ctrl+V / Cmd+V).",
+      "Under default signatures, choose it for new messages and for replies/forwards, then click Save.",
+    ],
+  },
+  outlookMobile: {
+    label: "Outlook app (phone)",
+    steps: [
+      "Open this page on your phone (or email the link to yourself) and tap \"Copy signature\".",
+      "In the Outlook app, tap your profile picture > Settings (gear) > Signature.",
+      "Clear the existing text and paste. Images and layout may be simplified on phones.",
+    ],
+  },
   gmail: {
     label: "Gmail",
     steps: [
@@ -11,15 +28,6 @@ const CLIENTS: Record<string, { label: string; steps: string[] }> = {
       "On the General tab, scroll to Signature and click \"Create new\".",
       "Paste into the signature box (Ctrl+V / Cmd+V).",
       "Set it as the default for new emails and replies, then click Save Changes at the bottom.",
-    ],
-  },
-  outlook: {
-    label: "Outlook",
-    steps: [
-      "Click \"Copy signature\" above.",
-      "Outlook on the web: Settings > Mail > Compose and reply. Outlook desktop: File > Options > Mail > Signatures.",
-      "Create a new signature and paste into the editor.",
-      "Choose it as the default for new messages and replies, then Save.",
     ],
   },
   apple: {
@@ -32,18 +40,17 @@ const CLIENTS: Record<string, { label: string; steps: string[] }> = {
     ],
   },
   mobile: {
-    label: "iPhone / Android",
+    label: "iPhone Mail",
     steps: [
       "Open this page on your phone (or email the link to yourself).",
       "Tap \"Copy signature\".",
-      "iPhone: Settings > Mail > Signature, paste, then shake the phone and choose Undo to restore formatting if needed.",
-      "Gmail app: signatures set in Gmail on the web are used automatically on mobile.",
+      "Go to Settings > Mail > Signature and paste. If the formatting is lost, shake the phone and choose Undo.",
     ],
   },
 };
 
 export default function InstallView({ html, fileName, downloadUrl, extra }: { html: string; fileName: string; downloadUrl: string; extra?: React.ReactNode }) {
-  const [client, setClient] = useState("gmail");
+  const [client, setClient] = useState("outlook");
   const [msg, setMsg] = useState("");
 
   function flash(text: string) {

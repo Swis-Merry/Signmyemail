@@ -3,12 +3,14 @@ import { requireUser } from "@/lib/auth";
 import { gmailConfigured, workspaceDomain } from "@/lib/google";
 import PushAllButton from "./PushAllButton";
 import PasswordForm from "./PasswordForm";
+import { getBaseUrl } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await requireUser();
   const configured = gmailConfigured();
+  const base = getBaseUrl();
   return (
     <AppShell>
       <h1 className="mb-6 text-xl font-semibold">Settings</h1>
@@ -35,6 +37,13 @@ export default async function SettingsPage() {
               </ol>
             </div>
           )}
+        </section>
+        <section className="card p-6 lg:col-span-2">
+          <h2 className="mb-1 font-semibold">Staff self-serve link</h2>
+          <p className="mb-2 text-sm text-stone-600">
+            Send this link to everyone. Each person types their work email and gets their own signature with a Copy button and Outlook steps. No admin access needed.
+          </p>
+          <a href={`${base}/install`} target="_blank" className="text-sm font-medium text-brand underline">{base}/install</a>
         </section>
       </div>
     </AppShell>
