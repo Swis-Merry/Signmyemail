@@ -11,11 +11,41 @@ interface Row {
   synced: boolean;
   hasPhoto: boolean;
   hasTitle: boolean;
+  publicToken: string;
 }
 
 export default function SignatureTable({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const installUrl = (r: Row) => `${window.location.origin}/s/${r.publicToken}`;
+
+  async function share(r: Row) {
+    await navigator.clipboard.writeText(installUrl(r));
+    setCopied(r.id);
+    setTimeout(() => setCopied((c) => (c === r.id ? null : c)), 2000);
+  }
+
+  function emailUser(r: Row) {
+    const first = r.name.trim().split(/\s+/)[0] || "there";
+    const body = [
+      `Hi ${first},`,
+      "",
+      "Your new DRE email signature is ready. Open this link to get it:",
+      installUrl(r),
+      "",
+      "1. Click \"Copy signature\".",
+      "2. In Outlook go to Settings > Account > Signatures (classic Outlook: File > Options > Mail > Signatures).",
+      "3. Click \"+ New signature\", paste it in, set it as the default for new messages and replies, and save.",
+      "",
+      "The page also has steps for the Outlook phone app.",
+      "",
+      "Thanks,",
+      "Marketing",
+    ].join("\n");
+    window.location.href = `mailto:${encodeURIComponent(r.email)}?subject=${encodeURIComponent("Your DRE email signature")}&body=${encodeURIComponent(body)}`;
+  }
 
   async function act(id: string, kind: "duplicate" | "delete") {
     if (kind === "delete" && !confirm("Delete this signature?")) return;
@@ -56,6 +86,8 @@ export default function SignatureTable({ rows }: { rows: Row[] }) {
               <td className="space-x-3 whitespace-nowrap py-2 text-right">
                 <Link href={`/signatures/${r.id}/edit`} className="text-brand hover:underline">Edit</Link>
                 <Link href={`/signatures/${r.id}`} className="text-brand hover:underline">Install</Link>
+                <button onClick={() => emailUser(r)} className="text-brand hover:underline">Email to user</button>
+                <button onClick={() => share(r)} className="text-brand hover:underline">{copied === r.id ? "Link copied" : "Share install URL"}</button>
                 <button onClick={() => act(r.id, "duplicate")} className="text-brand hover:underline">Duplicate</button>
                 <button onClick={() => act(r.id, "delete")} className="text-red-600 hover:underline">Delete</button>
               </td>
