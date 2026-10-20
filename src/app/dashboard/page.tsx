@@ -28,7 +28,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             <Link href="/signatures/new" className="btn-primary">Create signature</Link>
           </div>
         </div>
-        <SignatureTable rows={sigs.map((s) => ({ id: s.id, name: s.name, email: s.email, synced: !!s.gmailSyncedAt, hasPhoto: s.hasPhoto, hasTitle: s.hasTitle }))} />
+        <SignatureTable rows={sigs.map((s) => ({ id: s.id, name: s.name, email: s.email, synced: !!s.gmailSyncedAt, hasPhoto: s.hasPhoto, hasTitle: s.hasTitle, publicToken: s.publicToken }))} />
       </section>
     </AppShell>
   );
