@@ -18,7 +18,8 @@ export default async function PublicSignaturePage({ params }: { params: { token:
         <h1 className="text-2xl font-semibold">Your email signature is ready</h1>
         <p className="text-sm text-stone-500">Copy it below and follow the steps for your email app.</p>
       </div>
-      <InstallView html={html} fileName={`${sig.name.replace(/[^\w-]+/g, "_")}.html`} downloadUrl={`/api/public/signatures/${sig.publicToken}/html`} />
+      <InstallView html={html} fileName={`${sig.name.replace(/[^\w-]+/g, "_")}.html`} downloadUrl={`/api/public/signatures/${sig.publicToken}/html`}
+        cardUrl={`/api/public/signatures/${sig.publicToken}/card`} />
     </main>
   );
 }
