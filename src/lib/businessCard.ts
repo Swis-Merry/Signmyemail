@@ -18,12 +18,12 @@ const OFFICE_LINES = [
   "Toll Free: 800-37373 | hello@drehomes.com | P.O. Box 121261",
 ];
 
-const WEIGHTS = [300, 400, 700, 800] as const;
+const WEIGHTS = [300, 400, 600, 700] as const;
 type Weight = (typeof WEIGHTS)[number];
 let fontFiles: Promise<Buffer[]> | null = null;
 
 function loadFontFiles() {
-  fontFiles ??= Promise.all(WEIGHTS.map((w) => fs.readFile(path.join(process.cwd(), "assets", "card", `manrope-${w}.ttf`))));
+  fontFiles ??= Promise.all(WEIGHTS.map((w) => fs.readFile(path.join(process.cwd(), "assets", "card", `clash-grotesk-${w}.ttf`))));
   return fontFiles;
 }
 
@@ -71,31 +71,31 @@ export async function businessCardPdf(data: SignatureData) {
   // Front: name, title | mobile, email
   const front = pdf.addPage([W, H]);
   const name = d.name.trim().toUpperCase();
-  centered(front, name, f[800], fit(name, f[800], 17.5, W - 12 * MM), 25 * MM, BRAND);
+  centered(front, name, f[600], fit(name, f[600], 17.5, W - 12 * MM), 25 * MM, BRAND);
 
   const title = cardTitle(d.jobTitle);
   const phone = d.mobile.trim();
-  let size = 7;
+  let size = 7.5;
   const gap = 1.6 * MM;
   const bar = 0.8;
   const width = (s: number) =>
-    (title ? f[300].widthOfTextAtSize(title, s) : 0) + (phone ? f[800].widthOfTextAtSize(phone, s) : 0) + (title && phone ? gap * 2 + bar : 0);
+    (title ? f[400].widthOfTextAtSize(title, s) : 0) + (phone ? f[600].widthOfTextAtSize(phone, s) : 0) + (title && phone ? gap * 2 + bar : 0);
   if (width(size) > W - 10 * MM) size = (size * (W - 10 * MM)) / width(size);
   let x = (W - width(size)) / 2;
   const base = H - 30 * MM;
   if (title) {
-    front.drawText(title, { x, y: base, size, font: f[300], color: BRAND });
-    x += f[300].widthOfTextAtSize(title, size);
+    front.drawText(title, { x, y: base, size, font: f[400], color: BRAND });
+    x += f[400].widthOfTextAtSize(title, size);
   }
   if (title && phone) {
     x += gap;
     front.drawRectangle({ x, y: base - size * 0.12, width: bar, height: size * 0.95, color: BRAND });
     x += bar + gap;
   }
-  if (phone) front.drawText(phone, { x, y: base, size, font: f[800], color: BRAND });
+  if (phone) front.drawText(phone, { x, y: base, size, font: f[600], color: BRAND });
 
   const email = d.email.trim();
-  centered(front, email, f[400], fit(email, f[400], 6.6, W - 10 * MM), 44.9 * MM, BRAND);
+  centered(front, email, f[400], fit(email, f[400], 6.8, W - 10 * MM), 44.9 * MM, BRAND);
 
   // Back: logo, office band, QR
   const back = pdf.addPage([W, H]);
@@ -107,7 +107,7 @@ export async function businessCardPdf(data: SignatureData) {
 
   back.drawRectangle({ x: 0, y: 0, width: W, height: 17 * MM, color: BRAND });
   const textMax = 71.6 * MM - 3.7 * MM - 2 * MM;
-  const lineSize = Math.min(...OFFICE_LINES.map((l) => fit(l, f[400], 5.1, textMax)));
+  const lineSize = Math.min(...OFFICE_LINES.map((l) => fit(l, f[400], 5.3, textMax)));
   OFFICE_LINES.forEach((l, i) => back.drawText(l, { x: 3.7 * MM, y: H - (41.1 + i * 2.75) * MM, size: lineSize, font: f[400], color: WHITE }));
   drawQr(back, 71.6 * MM, 34.1 * MM, 15 * MM);
 
