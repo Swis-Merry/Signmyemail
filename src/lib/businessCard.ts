@@ -1,105 +1,115 @@
-import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
-import sharp from "sharp";
-import { assetIdFromUrl, getAsset } from "@/lib/assets";
+import fs from "node:fs/promises";
+import path from "node:path";
+import fontkit from "@pdf-lib/fontkit";
+import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import QRCode from "qrcode";
+import { ICON, LOGO } from "@/lib/card/logo";
 import type { SignatureData } from "@/lib/signature/types";
 
 const MM = 72 / 25.4;
 const W = 90 * MM;
 const H = 50 * MM;
+const BRAND = rgb(0xab / 255, 0x98 / 255, 0x89 / 255);
+const WHITE = rgb(1, 1, 1);
 
-function hex(c: string) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(c.trim());
-  const n = m ? parseInt(m[1], 16) : 0xab9889;
-  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+const QR_URL = "https://linktr.ee/qr/31ba61f3-bc51-432a-8d9b-1ade3a454c5d?utm_source=qr_code";
+const OFFICE_LINES = [
+  "Park Heights Square 2 | Offices 401-402, 405-406 | Dubai Hills Estate | Dubai",
+  "Toll Free: 800-37373 | hello@drehomes.com | P.O. Box 121261",
+];
+
+const WEIGHTS = [300, 400, 700, 800] as const;
+type Weight = (typeof WEIGHTS)[number];
+let fontFiles: Promise<Buffer[]> | null = null;
+
+function loadFontFiles() {
+  fontFiles ??= Promise.all(WEIGHTS.map((w) => fs.readFile(path.join(process.cwd(), "assets", "card", `manrope-${w}.ttf`))));
+  return fontFiles;
 }
 
-/** Standard PDF fonts only cover WinAnsi; drop anything else instead of throwing. */
-const safe = (s: string) => s.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, "").trim();
+const fit = (text: string, font: PDFFont, size: number, max: number) => Math.min(size, (size * max) / Math.max(font.widthOfTextAtSize(text, size), 0.01));
 
-async function loadImage(src: string, origin: string): Promise<Buffer | null> {
-  if (!src) return null;
-  const id = assetIdFromUrl(src, origin);
-  if (id) return (await getAsset(id))?.bytes ?? null;
-  try {
-    const u = new URL(src, origin);
-    if (u.protocol !== "https:") return null;
-    const res = await fetch(u, { redirect: "follow" });
-    return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
-  } catch {
-    return null;
+function centered(page: PDFPage, text: string, font: PDFFont, size: number, baselineFromTop: number, color: RGB) {
+  if (!text) return;
+  page.drawText(text, { x: (W - font.widthOfTextAtSize(text, size)) / 2, y: H - baselineFromTop, size, font, color });
+}
+
+/** "Property Associate | BRN 12345" -> "Property Associate" */
+export const cardTitle = (jobTitle: string) => jobTitle.split("|")[0].trim();
+
+function drawQr(page: PDFPage, x: number, top: number, size: number) {
+  const { modules } = QRCode.create(QR_URL, { errorCorrectionLevel: "H" });
+  const n = modules.size;
+  const m = size / n;
+  const hole = Math.ceil(n * 0.24) | 1;
+  const lo = (n - hole) / 2;
+  const inHole = (r: number, c: number) => r >= lo && r < lo + hole && c >= lo && c < lo + hole;
+  for (let r = 0; r < n; r++) {
+    let c = 0;
+    while (c < n) {
+      if (!modules.get(r, c) || inHole(r, c)) { c++; continue; }
+      const start = c;
+      while (c < n && modules.get(r, c) && !inHole(r, c)) c++;
+      page.drawRectangle({ x: x + start * m, y: H - top - (r + 1) * m, width: (c - start) * m, height: m * 1.02, color: WHITE });
+    }
   }
+  const icon = hole * m * 1.25;
+  const s = icon / ICON.size;
+  page.drawSvgPath(ICON.d, { x: x + size / 2 - icon / 2, y: H - top - size / 2 + icon / 2, scale: s, color: WHITE });
 }
 
-async function circlePhoto(bytes: Buffer, px: number) {
-  const mask = Buffer.from(`<svg width="${px}" height="${px}"><circle cx="${px / 2}" cy="${px / 2}" r="${px / 2}"/></svg>`);
-  return sharp(bytes).resize(px, px, { fit: "cover", position: "attention" }).grayscale().composite([{ input: mask, blend: "dest-in" }]).png().toBuffer();
-}
-
-function fit(text: string, font: PDFFont, size: number, max: number) {
-  let s = size;
-  while (s > 4 && font.widthOfTextAtSize(text, s) > max) s -= 0.25;
-  return s;
-}
-
-function line(page: PDFPage, text: string, x: number, y: number, font: PDFFont, size: number, color = rgb(0.15, 0.15, 0.15), max = W - x - 6 * MM) {
-  const t = safe(text);
-  if (!t) return;
-  page.drawText(t, { x, y, font, size: fit(t, font, size, max), color });
-}
-
-export async function businessCardPdf(data: SignatureData, origin: string) {
+export async function businessCardPdf(data: SignatureData) {
   const d = data.details;
-  const brand = hex(data.design.primaryColor);
   const pdf = await PDFDocument.create();
-  pdf.setTitle(safe(d.name) || "Business card");
+  pdf.registerFontkit(fontkit);
+  pdf.setTitle(d.name.trim() || "Business card");
   pdf.setAuthor("DRE");
-  const regular = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const banner = data.addons.find((a) => a.type === "banner");
+  const files = await loadFontFiles();
+  const embedded = await Promise.all(files.map((b) => pdf.embedFont(b, { subset: true })));
+  const f = Object.fromEntries(WEIGHTS.map((w, i) => [w, embedded[i]])) as Record<Weight, PDFFont>;
 
+  // Front: name, title | mobile, email
   const front = pdf.addPage([W, H]);
-  const photo = await loadImage(d.avatarUrl, origin);
-  let x = 6 * MM;
-  if (photo) {
-    const img = await pdf.embedPng(await circlePhoto(photo, 400).catch(() => null) ?? Buffer.alloc(0)).catch(() => null);
-    if (img) {
-      const s = 24 * MM;
-      front.drawImage(img, { x, y: H - 7 * MM - s, width: s, height: s });
-      x += s + 4 * MM;
-    }
-  }
-  front.drawRectangle({ x: x - 2 * MM, y: 8 * MM, width: 0.6, height: H - 16 * MM, color: brand });
-  let y = H - 11 * MM;
-  line(front, d.name, x, y, regular, 12, brand);
-  y -= 4.5 * MM;
-  line(front, d.jobTitle, x, y, bold, 7);
-  y -= 6 * MM;
-  const rows: [string, string][] = [
-    ["M:", d.mobile],
-    ["E:", d.email],
-    ["W:", d.website],
-    ...d.customFields.filter((f) => f.value).map((f): [string, string] => [`${f.label}:`, f.value]),
-    ["A:", d.address],
-  ];
-  for (const [label, value] of rows) {
-    if (!safe(value)) continue;
-    line(front, label, x, y, bold, 6, brand);
-    line(front, value, x + bold.widthOfTextAtSize(label, 6) + 1.5, y, regular, 6);
-    y -= 3.6 * MM;
-    if (y < 4 * MM) break;
-  }
+  const name = d.name.trim().toUpperCase();
+  centered(front, name, f[800], fit(name, f[800], 17.5, W - 12 * MM), 25 * MM, BRAND);
 
-  const back = pdf.addPage([W, H]);
-  back.drawRectangle({ x: 0, y: 0, width: W, height: H, color: brand });
-  const bannerBytes = banner ? await loadImage(banner.imageUrl, origin) : null;
-  if (bannerBytes) {
-    const png = await sharp(bannerBytes).png().toBuffer().catch(() => null);
-    const img = png ? await pdf.embedPng(png).catch(() => null) : null;
-    if (img) {
-      const w = W - 8 * MM;
-      const h = (img.height / img.width) * w;
-      back.drawImage(img, { x: 4 * MM, y: (H - h) / 2, width: w, height: h });
-    }
+  const title = cardTitle(d.jobTitle);
+  const phone = d.mobile.trim();
+  let size = 7;
+  const gap = 1.6 * MM;
+  const bar = 0.8;
+  const width = (s: number) =>
+    (title ? f[300].widthOfTextAtSize(title, s) : 0) + (phone ? f[800].widthOfTextAtSize(phone, s) : 0) + (title && phone ? gap * 2 + bar : 0);
+  if (width(size) > W - 10 * MM) size = (size * (W - 10 * MM)) / width(size);
+  let x = (W - width(size)) / 2;
+  const base = H - 30 * MM;
+  if (title) {
+    front.drawText(title, { x, y: base, size, font: f[300], color: BRAND });
+    x += f[300].widthOfTextAtSize(title, size);
   }
+  if (title && phone) {
+    x += gap;
+    front.drawRectangle({ x, y: base - size * 0.12, width: bar, height: size * 0.95, color: BRAND });
+    x += bar + gap;
+  }
+  if (phone) front.drawText(phone, { x, y: base, size, font: f[800], color: BRAND });
+
+  const email = d.email.trim();
+  centered(front, email, f[400], fit(email, f[400], 6.6, W - 10 * MM), 44.9 * MM, BRAND);
+
+  // Back: logo, office band, QR
+  const back = pdf.addPage([W, H]);
+  const lw = 29.4 * MM;
+  const ls = lw / LOGO.w;
+  const lh = LOGO.h * ls;
+  const cy = H - 16.5 * MM;
+  back.drawSvgPath(LOGO.d, { x: W / 2 - lw / 2 - LOGO.x * ls, y: cy + lh / 2 + LOGO.y * ls, scale: ls, color: BRAND });
+
+  back.drawRectangle({ x: 0, y: 0, width: W, height: 17 * MM, color: BRAND });
+  const textMax = 71.6 * MM - 3.7 * MM - 2 * MM;
+  const lineSize = Math.min(...OFFICE_LINES.map((l) => fit(l, f[400], 5.1, textMax)));
+  OFFICE_LINES.forEach((l, i) => back.drawText(l, { x: 3.7 * MM, y: H - (41.1 + i * 2.75) * MM, size: lineSize, font: f[400], color: WHITE }));
+  drawQr(back, 71.6 * MM, 34.1 * MM, 15 * MM);
+
   return pdf.save();
 }
