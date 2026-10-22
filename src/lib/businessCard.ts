@@ -13,10 +13,15 @@ const BRAND = rgb(0xab / 255, 0x98 / 255, 0x89 / 255);
 const WHITE = rgb(1, 1, 1);
 
 const QR_URL = "https://linktr.ee/qr/31ba61f3-bc51-432a-8d9b-1ade3a454c5d?utm_source=qr_code";
-const OFFICE_LINES = [
-  "Park Heights Square 2 | Offices 401-402, 405-406 | Dubai Hills Estate | Dubai",
-  "Toll Free: 800-37373 | hello@drehomes.com | P.O. Box 121261",
-];
+const HQ_LINE = "Park Heights Square 2 | Offices 401-402, 405-406 | Dubai Hills Estate | Dubai";
+const CONTACT_LINE = "Toll Free: 800-37373 | hello@drehomes.com | P.O. Box 121261";
+
+/** The person's branch address without the trailing country; head-office staff get the printed card's wording. */
+export function cardAddress(address: string) {
+  const a = address.replace(/\s+/g, " ").trim();
+  if (!a || /park heights/i.test(a)) return HQ_LINE;
+  return a.replace(/\s*\|\s*UAE$/i, "");
+}
 
 const WEIGHTS = [300, 400, 600, 700] as const;
 type Weight = (typeof WEIGHTS)[number];
@@ -107,8 +112,9 @@ export async function businessCardPdf(data: SignatureData) {
 
   back.drawRectangle({ x: 0, y: 0, width: W, height: 17 * MM, color: BRAND });
   const textMax = 71.6 * MM - 3.7 * MM - 2 * MM;
-  const lineSize = Math.min(...OFFICE_LINES.map((l) => fit(l, f[400], 5.3, textMax)));
-  OFFICE_LINES.forEach((l, i) => back.drawText(l, { x: 3.7 * MM, y: H - (41.1 + i * 2.75) * MM, size: lineSize, font: f[400], color: WHITE }));
+  const officeLines = [cardAddress(d.address), CONTACT_LINE];
+  const lineSize = Math.min(...officeLines.map((l) => fit(l, f[400], 5.3, textMax)));
+  officeLines.forEach((l, i) => back.drawText(l, { x: 3.7 * MM, y: H - (41.1 + i * 2.75) * MM, size: lineSize, font: f[400], color: WHITE }));
   drawQr(back, 71.6 * MM, 34.1 * MM, 15 * MM);
 
   return pdf.save();

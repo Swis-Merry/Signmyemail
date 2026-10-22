@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const sig = await getSignature(row.id);
     if (!sig) continue;
     try {
-      await pushGmailSignature(sig.email, renderSignature(sig.data, { baseUrl: base }));
+      await pushGmailSignature(sig.email, renderSignature(sig.data, { baseUrl: base, publicToken: sig.publicToken }));
       await markGmailSynced(sig.id);
       ok++;
     } catch (e) {

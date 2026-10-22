@@ -4,6 +4,7 @@ import type { Addon, CustomField, Design, Details, FieldType, SignatureData } fr
 
 export interface RenderOptions {
   baseUrl: string;
+  publicToken?: string;
 }
 
 interface Ctx {
@@ -12,6 +13,7 @@ interface Ctx {
   x: Design;
   base: string;
   fs: number;
+  cardUrl?: string;
 }
 
 export function esc(value: string | number | null | undefined): string {
@@ -127,19 +129,20 @@ function inlineContacts(c: Ctx) {
 }
 
 function socialsHtml(c: Ctx, align: "left" | "center" = "left") {
-  const links = c.s.filter((l) => l.url);
-  if (!links.length) return "";
   const label = (n: string) => SOCIAL_NETWORKS[n]?.label ?? n;
+  const links = c.s.filter((l) => l.url).map((l) => ({ href: absUrl(l.url, c.base), network: l.network, label: label(l.network) }));
+  if (c.cardUrl) links.push({ href: c.cardUrl, network: "card", label: "Business card" });
+  if (!links.length) return "";
   if (c.x.iconStyle === "text") {
     const inner = links
-      .map((l) => `<a href="${esc(absUrl(l.url, c.base))}" style="color:${c.x.iconColor};text-decoration:none;font-weight:bold;">${esc(label(l.network))}</a>`)
+      .map((l) => `<a href="${esc(l.href)}" style="color:${c.x.iconColor};text-decoration:none;font-weight:bold;">${esc(l.label)}</a>`)
       .join(`<span style="color:${c.x.textColor};">&nbsp;&middot;&nbsp;</span>`);
     return p(`${baseText(c)}padding-top:8px;text-align:${align};`, inner);
   }
   const cells = links
     .map(
       (l) =>
-        `<td style="padding:0 4px 0 0;"><a href="${esc(absUrl(l.url, c.base))}"><img src="${esc(iconSrc(c, l.network))}" width="22" height="22" alt="${esc(label(l.network))}" style="display:block;border:0;width:22px;height:22px;"></a></td>`,
+        `<td style="padding:0 4px 0 0;"><a href="${esc(l.href)}" title="${esc(l.label)}"><img src="${esc(iconSrc(c, l.network))}" width="22" height="22" alt="${esc(l.label)}" style="display:block;border:0;width:22px;height:22px;"></a></td>`,
     )
     .join("");
   return `<table cellpadding="0" cellspacing="0" border="0" align="${align}" style="border-collapse:collapse;margin-top:8px;"><tr>${cells}</tr></table>`;
@@ -297,7 +300,14 @@ function addonHtml(c: Ctx, a: Addon): string {
 }
 
 export function renderSignature(data: SignatureData, opts: RenderOptions): string {
-  const c: Ctx = { d: data.details, s: data.socials, x: data.design, base: opts.baseUrl, fs: FONT_SIZE_PX[data.design.fontSize] ?? 12 };
+  const c: Ctx = {
+    d: data.details,
+    s: data.socials,
+    x: data.design,
+    base: opts.baseUrl,
+    fs: FONT_SIZE_PX[data.design.fontSize] ?? 12,
+    cardUrl: opts.publicToken ? `${trimBase(opts.baseUrl)}/api/public/signatures/${encodeURIComponent(opts.publicToken)}/card` : undefined,
+  };
   const tpl = templates[data.design.templateId] ?? templates.classic;
   const addons = data.addons.map((a) => addonHtml(c, a)).join("");
   return `<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:${c.x.fontFamily};max-width:${c.x.width}px;"><tr><td>${tpl.render(c)}</td></tr>${addons}</table>`;

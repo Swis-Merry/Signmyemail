@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function SignaturePage({ params }: { params: { id: string } }) {
   const sig = await getSignature(params.id);
   if (!sig) notFound();
-  const html = renderSignature(sig.data, { baseUrl: getBaseUrl() });
+  const html = renderSignature(sig.data, { baseUrl: getBaseUrl(), publicToken: sig.publicToken });
   return (
     <AppShell>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
