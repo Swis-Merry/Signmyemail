@@ -88,6 +88,7 @@ export default function SignatureTable({ rows }: { rows: Row[] }) {
                 <Link href={`/signatures/${r.id}`} className="text-brand hover:underline">Install</Link>
                 <button onClick={() => emailUser(r)} className="text-brand hover:underline">Email to user</button>
                 <button onClick={() => share(r)} className="text-brand hover:underline">{copied === r.id ? "Link copied" : "Share install URL"}</button>
+                <a href={`/api/public/signatures/${r.publicToken}/card`} download className="text-brand hover:underline">Business card</a>
                 <button onClick={() => act(r.id, "duplicate")} className="text-brand hover:underline">Duplicate</button>
                 <button onClick={() => act(r.id, "delete")} className="text-red-600 hover:underline">Delete</button>
               </td>

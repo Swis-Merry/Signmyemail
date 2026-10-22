@@ -30,6 +30,7 @@ export default async function SignaturePage({ params }: { params: { id: string }
         html={html}
         fileName={`${sig.name.replace(/[^\w-]+/g, "_")}.html`}
         downloadUrl={`/api/public/signatures/${sig.publicToken}/html`}
+        cardUrl={`/api/public/signatures/${sig.publicToken}/card`}
         extra={<GmailPushButton id={sig.id} email={sig.email} configured={gmailConfigured()} syncedAt={sig.gmailSyncedAt?.toISOString() ?? null} />}
       />
     </AppShell>

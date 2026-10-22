@@ -49,7 +49,7 @@ const CLIENTS: Record<string, { label: string; steps: string[] }> = {
   },
 };
 
-export default function InstallView({ html, fileName, downloadUrl, extra }: { html: string; fileName: string; downloadUrl: string; extra?: React.ReactNode }) {
+export default function InstallView({ html, fileName, downloadUrl, cardUrl, extra }: { html: string; fileName: string; downloadUrl: string; cardUrl?: string; extra?: React.ReactNode }) {
   const [client, setClient] = useState("outlook");
   const [msg, setMsg] = useState("");
 
@@ -90,6 +90,7 @@ export default function InstallView({ html, fileName, downloadUrl, extra }: { ht
         <button className="btn-primary" onClick={copyRich}>Copy signature</button>
         <button className="btn-secondary" onClick={copySource}>Copy HTML source</button>
         <a className="btn-secondary" href={downloadUrl} download={fileName}>Download .html</a>
+        {cardUrl && <a className="btn-secondary" href={cardUrl} download>Download business card (PDF)</a>}
         {extra}
         {msg && <span className="text-sm text-green-700">{msg}</span>}
       </div>
