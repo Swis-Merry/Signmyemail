@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function PublicSignaturePage({ params }: { params: { token: string } }) {
   const sig = await getSignatureByToken(params.token);
   if (!sig) notFound();
-  const html = renderSignature(sig.data, { baseUrl: getBaseUrl() });
+  const html = renderSignature(sig.data, { baseUrl: getBaseUrl(), publicToken: sig.publicToken });
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">

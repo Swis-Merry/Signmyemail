@@ -10,7 +10,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!sig) return notFound();
   const base = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
   try {
-    await pushGmailSignature(sig.email, renderSignature(sig.data, { baseUrl: base }));
+    await pushGmailSignature(sig.email, renderSignature(sig.data, { baseUrl: base, publicToken: sig.publicToken }));
     await markGmailSynced(sig.id);
     return NextResponse.json({ ok: true });
   } catch (e) {

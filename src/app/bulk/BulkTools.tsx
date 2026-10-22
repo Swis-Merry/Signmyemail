@@ -156,7 +156,7 @@ export default function BulkTools({ signatures, defaultSourceId }: { signatures:
       <section className="card p-6 lg:col-span-2">
         <h2 className="mb-1 font-semibold">Same theme for everyone</h2>
         <p className="mb-3 text-sm text-stone-600">
-          Copies the layout, colors, fonts, banner, address, phone lines, website and LinkedIn/Instagram from one signature to all others. Each person keeps their own name, email, title, mobile, WhatsApp and photo.
+          Copies the layout, colors, fonts, banner, phone lines, website, social links and disclaimer from one signature to all others. Each person keeps their own name, email, title, mobile, WhatsApp, photo and branch address.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <select ref={sourceRef} autoComplete="off" className="input w-72" value={sourceId} onChange={(e) => setSourceId(e.target.value)}>

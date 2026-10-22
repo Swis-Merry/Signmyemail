@@ -5,14 +5,14 @@ import { newId } from "@/lib/signature/defaults";
 import type { SignatureData } from "@/lib/signature/types";
 import { getSignature, getSignatureByEmail, listSignatures, updateSignature } from "@/lib/signatures";
 
-const PERSONAL = ["name", "email", "jobTitle", "mobile", "avatarUrl"] as const;
+const PERSONAL = ["name", "email", "jobTitle", "mobile", "avatarUrl", "address"] as const;
 
 export function whatsappUrl(mobile: string) {
   const digits = mobile.replace(/\D/g, "");
   return digits ? `https://web.whatsapp.com/send?phone=${digits}` : "";
 }
 
-/** The source's design, add-ons, company lines and shared social links, with the target's personal fields and WhatsApp. */
+/** The source's design, add-ons, company lines and shared social links, with the target's personal fields (incl. branch address) and WhatsApp. */
 export function applyTheme(source: SignatureData, target: SignatureData): SignatureData {
   const out = structuredClone(source);
   for (const k of PERSONAL) out.details[k] = target.details[k];
