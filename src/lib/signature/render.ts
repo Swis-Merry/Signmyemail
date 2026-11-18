@@ -65,7 +65,8 @@ function avatarSrc(c: Ctx): string {
 
 function iconSrc(c: Ctx, network: string): string {
   const color = c.x.iconStyle === "brand" ? SOCIAL_NETWORKS[network]?.color ?? "#555555" : c.x.iconColor;
-  return `${trimBase(c.base)}/api/icon/${encodeURIComponent(network)}/${hex(color)}-${c.x.iconShape}.png`;
+  const safeColor = hex(color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6) || "555555";
+  return `${trimBase(c.base)}/api/icon/${encodeURIComponent(network)}/${safeColor}-${c.x.iconShape || "circle"}.png`;
 }
 
 const p = (style: string, inner: string) => `<p style="margin:0;${style}">${inner}</p>`;
