@@ -67,6 +67,9 @@ export async function renderIcon(networkParam: string, colorParam: string | null
 export async function emailSafeImage(bytes: Buffer, contentType: string) {
   if (["image/png", "image/jpeg", "image/gif"].includes(contentType)) return { bytes, contentType };
   const { pages = 1 } = await sharp(bytes).metadata();
-  if (pages > 1) return { bytes: await sharp(bytes, { animated: true }).gif().toBuffer(), contentType: "image/gif" };
+  if (pages > 1) {
+    const gif = await sharp(bytes, { animated: true }).gif().toBuffer().catch(() => null);
+    if (gif) return { bytes: gif, contentType: "image/gif" };
+  }
   return { bytes: await sharp(bytes).rotate().png().toBuffer(), contentType: "image/png" };
 }
