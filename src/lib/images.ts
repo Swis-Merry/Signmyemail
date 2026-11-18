@@ -63,8 +63,10 @@ export async function renderIcon(networkParam: string, colorParam: string | null
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-/** Email clients only reliably show PNG/JPEG/GIF; convert anything else (e.g. WebP), or anything when PNG is required, to PNG. */
-export async function emailSafeImage(bytes: Buffer, contentType: string, required?: "image/png") {
-  if (required ? contentType === required : ["image/png", "image/jpeg", "image/gif"].includes(contentType)) return { bytes, contentType };
-  return { bytes: await sharp(bytes).png().toBuffer(), contentType: "image/png" };
+/** Email clients only reliably show PNG/JPEG/GIF; convert anything else (e.g. WebP) to PNG, or GIF when animated. */
+export async function emailSafeImage(bytes: Buffer, contentType: string) {
+  if (["image/png", "image/jpeg", "image/gif"].includes(contentType)) return { bytes, contentType };
+  const { pages = 1 } = await sharp(bytes).metadata();
+  if (pages > 1) return { bytes: await sharp(bytes, { animated: true }).gif().toBuffer(), contentType: "image/gif" };
+  return { bytes: await sharp(bytes).rotate().png().toBuffer(), contentType: "image/png" };
 }
