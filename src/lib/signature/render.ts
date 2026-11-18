@@ -43,15 +43,30 @@ export function hrefFor(type: FieldType, value: string, base: string): string {
 const hex = (c: string) => c.replace("#", "");
 const trimBase = (base: string) => base.replace(/\/$/, "");
 
+/** Our stored asset id when `url` points at /api/assets/<id> (relative or on `base`). */
+function ownAssetId(url: string, base: string): string | null {
+  const m = /^(?:(https?:\/\/[^/]+))?\/api\/assets\/([\w-]+)(?:\.png)?$/i.exec((url || "").trim());
+  if (!m) return null;
+  return !m[1] || m[1].toLowerCase() === trimBase(base).toLowerCase() ? m[2] : null;
+}
+
+// Email clients (classic Outlook especially) are most reliable with short, query-free .png URLs.
+function imageSrc(url: string, base: string): string {
+  const id = ownAssetId(url, base);
+  return id ? `${trimBase(base)}/api/assets/${id}.png` : absUrl(url, base);
+}
+
 function avatarSrc(c: Ctx): string {
+  const id = ownAssetId(c.d.avatarUrl, c.base);
+  if (id) return `${trimBase(c.base)}/api/avatar/${id}/${c.x.avatarSize}-${c.x.avatarShape}.png`;
   const params = new URLSearchParams({ src: absUrl(c.d.avatarUrl, c.base), size: String(c.x.avatarSize), shape: c.x.avatarShape });
   return `${trimBase(c.base)}/api/avatar?${params.toString()}`;
 }
 
 function iconSrc(c: Ctx, network: string): string {
   const color = c.x.iconStyle === "brand" ? SOCIAL_NETWORKS[network]?.color ?? "#555555" : c.x.iconColor;
-  const params = new URLSearchParams({ color: hex(color), shape: c.x.iconShape });
-  return `${trimBase(c.base)}/api/icon/${encodeURIComponent(network)}?${params.toString()}`;
+  const safeColor = hex(color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6) || "555555";
+  return `${trimBase(c.base)}/api/icon/${encodeURIComponent(network)}/${safeColor}-${c.x.iconShape || "circle"}.png`;
 }
 
 const p = (style: string, inner: string) => `<p style="margin:0;${style}">${inner}</p>`;
@@ -255,14 +270,14 @@ function addonHtml(c: Ctx, a: Addon): string {
   switch (a.type) {
     case "banner": {
       if (!a.imageUrl) return "";
-      const img = `<img src="${esc(absUrl(a.imageUrl, c.base))}" width="${a.width}" alt="" style="display:block;border:0;width:${a.width}px;max-width:100%;height:auto;">`;
+      const img = `<img src="${esc(imageSrc(a.imageUrl, c.base))}" width="${a.width}" alt="" style="display:block;border:0;width:${a.width}px;max-width:100%;height:auto;">`;
       return row(linkedImg(c, img, a.link));
     }
     case "badges": {
       const cells = a.items
         .filter((b) => b.imageUrl)
         .map((b) => {
-          const img = `<img src="${esc(absUrl(b.imageUrl, c.base))}" height="${a.height}" alt="" style="display:block;border:0;height:${a.height}px;">`;
+          const img = `<img src="${esc(imageSrc(b.imageUrl, c.base))}" height="${a.height}" alt="" style="display:block;border:0;height:${a.height}px;">`;
           return `<td style="padding-right:8px;">${linkedImg(c, img, b.link)}</td>`;
         })
         .join("");

@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
-import sharp from "sharp";
 import { assetIdFromUrl, getAsset } from "@/lib/assets";
+import { clampAvatarSize, pngResponse, renderAvatar } from "@/lib/images";
 
 export const runtime = "nodejs";
 
@@ -32,18 +32,9 @@ async function loadSource(src: string, origin: string): Promise<Buffer | null> {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const src = url.searchParams.get("src") || "";
-  const display = Math.min(Math.max(parseInt(url.searchParams.get("size") || "100", 10) || 100, 32), 240);
+  const display = clampAvatarSize(url.searchParams.get("size"));
   const shape = url.searchParams.get("shape") || "circle";
-  const size = display * 2;
   const input = await loadSource(src, url.origin);
   if (!input) return new Response("Invalid image source", { status: 400 });
-
-  const radius = shape === "circle" ? size / 2 : shape === "rounded" ? Math.round(size * 0.12) : 0;
-  let img = sharp(input, { density: 300 }).resize(size, size, { fit: "cover" });
-  if (radius) {
-    const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${radius}" ry="${radius}"/></svg>`);
-    img = sharp(await img.png().toBuffer()).composite([{ input: mask, blend: "dest-in" }]);
-  }
-  const png = await img.png().toBuffer();
-  return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } });
+  return pngResponse(await renderAvatar(input, display, shape), "photo.png", { "Cache-Control": "public, max-age=86400" });
 }
