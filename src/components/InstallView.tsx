@@ -2,11 +2,86 @@
 
 import { useState } from "react";
 
+function blobToDataUri(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// Inline one image as a data URI, downscaled to 2x its display size and JPEG-encoded when opaque.
+async function inlineImage(url: string, width: number, height: number): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type.startsWith("image/")) return null;
+    const original = await blobToDataUri(blob);
+    if (blob.size <= 20_000 || blob.type === "image/gif") return original;
+    const bmp = await createImageBitmap(blob);
+    const target = width ? width * 2 : height ? Math.round((height * 2 * bmp.width) / bmp.height) : bmp.width;
+    const scale = Math.min(1, target / bmp.width);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return original;
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let opaque = true;
+    for (let i = 3; i < px.length; i += 4) if (px[i] < 255) { opaque = false; break; }
+    const out = opaque ? canvas.toDataURL("image/jpeg", 0.85) : canvas.toDataURL("image/png");
+    return out.length < original.length ? out : original;
+  } catch {
+    return null;
+  }
+}
+
+/** Signature HTML with every same-origin image embedded, so recipients never fetch them from our server. */
+async function embedImages(html: string): Promise<string> {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const cache = new Map<string, Promise<string | null>>();
+  await Promise.all(
+    Array.from(doc.querySelectorAll("img")).map(async (img) => {
+      const src = img.getAttribute("src") || "";
+      if (!src || src.startsWith("data:")) return;
+      const key = `${src} ${img.getAttribute("width")} ${img.getAttribute("height")}`;
+      if (!cache.has(key)) cache.set(key, inlineImage(src, Number(img.getAttribute("width")) || 0, Number(img.getAttribute("height")) || 0));
+      const data = await cache.get(key);
+      if (data) img.setAttribute("src", data);
+    }),
+  );
+  return doc.body.innerHTML;
+}
+
+async function copyHtml(html: string) {
+  try {
+    const item = new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([html], { type: "text/plain" }) });
+    await navigator.clipboard.write([item]);
+  } catch {
+    const el = document.createElement("div");
+    el.innerHTML = html;
+    el.style.position = "fixed";
+    el.style.left = "-10000px";
+    document.body.appendChild(el);
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    document.execCommand("copy");
+    sel?.removeAllRanges();
+    el.remove();
+  }
+}
+
 const CLIENTS: Record<string, { label: string; steps: string[] }> = {
   outlook: {
     label: "Outlook",
     steps: [
-      "Click \"Copy signature\" above.",
+      "Click \"Copy signature\" above. If photos or the banner show as broken boxes for you or your colleagues, use \"Copy with built-in images\" instead.",
       "New Outlook / Outlook on the web: Settings (gear icon) > Account > Signatures. Classic Outlook for Windows: File > Options > Mail > Signatures.",
       "Click \"+ New signature\", give it a name (e.g. DRE) and paste into the editor (Ctrl+V / Cmd+V).",
       "Under default signatures, choose it for new messages and for replies/forwards, then click Save.",
@@ -59,21 +134,14 @@ export default function InstallView({ html, fileName, downloadUrl, cardUrl, extr
   }
 
   async function copyRich() {
-    try {
-      const item = new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([html], { type: "text/plain" }) });
-      await navigator.clipboard.write([item]);
-    } catch {
-      const el = document.getElementById("sig-preview");
-      if (!el) return;
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const sel = window.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-      document.execCommand("copy");
-      sel?.removeAllRanges();
-    }
+    await copyHtml(html);
     flash("Signature copied. Paste it into your email client.");
+  }
+
+  async function copyEmbedded() {
+    setMsg("Embedding images...");
+    await copyHtml(await embedImages(html));
+    flash("Signature copied with images built in. Paste it into Outlook.");
   }
 
   async function copySource() {
@@ -88,6 +156,7 @@ export default function InstallView({ html, fileName, downloadUrl, cardUrl, extr
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button className="btn-primary" onClick={copyRich}>Copy signature</button>
+        <button className="btn-secondary" onClick={copyEmbedded} title="Photos, banner and icons are stored inside the signature, so they show even where our website is blocked">Copy with built-in images</button>
         <button className="btn-secondary" onClick={copySource}>Copy HTML source</button>
         <a className="btn-secondary" href={downloadUrl} download={fileName}>Download .html</a>
         {cardUrl && <a className="btn-secondary" href={cardUrl} download>Download business card (PDF)</a>}
