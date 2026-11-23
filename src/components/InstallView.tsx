@@ -56,13 +56,16 @@ async function embedImages(html: string): Promise<string> {
   return doc.body.innerHTML;
 }
 
-async function copyHtml(html: string) {
+// Safari only allows clipboard writes inside the click, so the HTML may be a pending promise.
+async function copyHtml(html: string | Promise<string>): Promise<boolean> {
+  const pending = Promise.resolve(html);
   try {
-    const item = new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([html], { type: "text/plain" }) });
-    await navigator.clipboard.write([item]);
+    const blob = (type: string) => pending.then((h) => new Blob([h], { type }));
+    await navigator.clipboard.write([new ClipboardItem({ "text/html": blob("text/html"), "text/plain": blob("text/plain") })]);
+    return true;
   } catch {
     const el = document.createElement("div");
-    el.innerHTML = html;
+    el.innerHTML = await pending;
     el.style.position = "fixed";
     el.style.left = "-10000px";
     document.body.appendChild(el);
@@ -71,9 +74,10 @@ async function copyHtml(html: string) {
     const sel = window.getSelection();
     sel?.removeAllRanges();
     sel?.addRange(range);
-    document.execCommand("copy");
+    const ok = document.execCommand("copy");
     sel?.removeAllRanges();
     el.remove();
+    return ok;
   }
 }
 
@@ -134,14 +138,13 @@ export default function InstallView({ html, fileName, downloadUrl, cardUrl, extr
   }
 
   async function copyRich() {
-    await copyHtml(html);
-    flash("Signature copied. Paste it into your email client.");
+    flash((await copyHtml(html)) ? "Signature copied. Paste it into your email client." : "Copy failed. Try again or use Download .html.");
   }
 
   async function copyEmbedded() {
     setMsg("Embedding images...");
-    await copyHtml(await embedImages(html));
-    flash("Signature copied with images built in. Paste it into Outlook.");
+    const ok = await copyHtml(embedImages(html));
+    flash(ok ? "Signature copied with images built in. Paste it into Outlook." : "Copy failed. Try again in Chrome or Edge.");
   }
 
   async function copySource() {
